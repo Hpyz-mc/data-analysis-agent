@@ -44,7 +44,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 | 配置项 | Docker 首次安装的用途 |
 | --- | --- |
 | `LLM_API_KEY` | 必填，自己的模型 API Key |
-| `LLM_API_ID` | 账号可调用的模型 ID；模板中的名称是示例，请按服务实际支持情况确认 |
+| `LLM_API_ID` | 默认 `deepseek-flash`，与代码和 Compose 一致；可改为账号可调用的模型 ID |
 | `LLM_BASE_URL` | 模型 API 地址，模板为 `https://api.deepseek.com` |
 | `DOCKER_POSTGRES_PASSWORD` | 必填，Docker 数据库管理员密码 |
 | `DOCKER_READER_PASSWORD` | 必填，业务分析只读账号密码 |
@@ -140,3 +140,11 @@ docker compose up -d
 | 提示缩小查询范围 | 缩小时间或筛选范围，或请求汇总；截断结果不能作为完整结论 |
 
 反馈错误前请脱敏日志。普通日常使用只需工作台；本机 Python / PostgreSQL 开发的历史说明见[开发记录](development-notes.md)，前端热更新见 [`web/README.md`](../web/README.md)。
+
+## 模型与配置默认值
+
+默认模型依据 [DeepSeek 官方接口文档](https://api-docs.deepseek.com/) 统一为 `deepseek-flash`（2026-10-05 核对）。更换服务或模型时同时设置 `LLM_BASE_URL` 和 `LLM_API_ID`；账号是否有调用权限仍以实际服务为准。
+
+模板列出了思考模式、超时、重试、调用次数和 Token 预算的默认值，与 `app/core/config.py` 和 `compose.yaml` 一致。单次调用超时与整轮截止时间是不同限制；提高限制可能增加等待与费用。通常先保留默认值，出现预算或超时提示后再根据实际数据调整。
+
+目录调整后，会话 schema 位于 `docker/db/session_schema.sql`；已有数据库继续执行 `sh docker/migrate_session.sh`，无需删除数据卷。历史报告、手动脚本和 SQL 示例分别见 `docs/archive/`、`scripts/` 和 `examples/sql/`。

@@ -2,7 +2,7 @@
 
 基于 **LangGraph、FastAPI、DeepSeek、PostgreSQL 和 React** 的本地数据分析工作台。上传 CSV / Excel，用自然语言查询数据、分析趋势与维度贡献，通过图表和多轮追问继续探索。
 
-[快速开始](#快速开始) · [演示案例](docs/demo.md) · [安装与排错](docs/quickstart.md) · [前端开发](web/README.md) · [MIT 许可证](LICENSE)
+[快速开始](#快速开始) · [演示案例](docs/demo.md) · [安装与排错](docs/quickstart.md) · [前端开发](web/README.md) · [贡献指南](CONTRIBUTING.md) · [MIT 许可证](LICENSE)
 
 ![洞察工作台首页](docs/assets/workbench.jpg)
 
@@ -78,8 +78,10 @@ docker/               数据库初始化、迁移和示例脚本
 tests/                后端与回归测试
 examples/data/        可上传体验的合成数据
 docs/                 安装、演示、截图及开发记录
-outputs/              既有 SQL 和验收报告
-work/                 既有验收与 Token 测试脚本
+examples/sql/         手动数据库演示与历史测试数据
+scripts/              真实模型验收与 Token 测试脚本
+outputs/              运行时图表和本地测试结果（不提交）
+.github/              CI、Issue 和 PR 模板
 compose.yaml          本机部署入口
 ```
 
@@ -108,6 +110,9 @@ python -m unittest discover -s tests -v
 - [合成数据演示与预期结果](docs/demo.md)
 - [详细实现说明与历史开发记录](docs/development-notes.md)
 - [前端开发与客户端检查](web/README.md)
+- [贡献、测试和提交方式](CONTRIBUTING.md)
+- [历史验收记录索引](docs/archive/README.md)
+- [变更记录与发布准备](CHANGELOG.md)
 
 欢迎通过 [Issues](https://github.com/Hpyz-mc/data-analysis-agent/issues) 反馈。请附上复现步骤、运行环境和脱敏错误信息，勿提交真实密钥、连接串或业务数据。
 

@@ -15,10 +15,10 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
       react-markdown:
-        specifier: latest
+        specifier: ^10.1.0
         version: 10.1.0(@types/react@19.3.0)(react@19.3.0)
       remark-gfm:
-        specifier: latest
+        specifier: ^4.0.1
         version: 4.0.1
     devDependencies:
       '@types/react':

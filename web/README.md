@@ -12,7 +12,7 @@ docker compose up -d --no-deps --build api ui
 
 前提是项目数据库已经运行。首次启动整个项目请使用根目录 README 的部署步骤。更新前端不需要删除数据卷或重新导入数据。
 
-本地开发在 `web/` 目录运行：
+本地开发使用 Node 22（22.13 或更新）和 pnpm 11.25.0，在 `web/` 目录运行：
 
 ```bash
 pnpm install --frozen-lockfile
@@ -41,7 +41,7 @@ pnpm dev
 Node 22 支持类型剥离时运行：
 
 ```bash
-node --experimental-strip-types --test tests/api.test.mjs tests/datasets.test.mjs tests/chatStatus.test.mjs tests/reportCharts.test.mjs
+pnpm test
 ```
 
 用模拟响应检查 Unicode/分块 SSE、终止错误、缺失完成事件、409 和图表路径。不调用付费模型。它不替代浏览器验收或模型分析准确性验收。

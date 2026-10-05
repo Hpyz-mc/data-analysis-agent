@@ -15,7 +15,7 @@ psql -d agent_db
 进入后先执行 `SELECT current_user;`，确认不是 `agent_reader`。看到 `agent_db=#` 后输入：
 
 ```text
-\i /Users/heipiyezhu/Documents/Codex/2026-09-23/referenced-chatgpt-conversation-this-is-an/outputs/advanced_test_data.sql
+\i examples/sql/advanced_test_data.sql
 ```
 
 授权 Agent 使用的只读账号：

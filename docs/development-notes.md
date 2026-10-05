@@ -4,13 +4,13 @@
 
 ## 执行入口与预算收尾
 
-趋势、比较和诊断任务必须先确认结构化范围，再由程序执行查询、核验、辅助查证和图表；范围缺失仅允许一次规划补正，不再落回自由决策循环。模型调用上限仍为 6，最后一个名额预留给报告。中途预算或模型失败时，已有可用结果会保留为未完成，不自动重跑工具。普通和流式接口新增安全 `diagnostics` 摘要，`usage.calls[].phase` 标记规划/决策/报告；失败摘要也保存在会话历史。实现、验证边界及复测建议见 [执行可靠性修复记录](../outputs/execution_reliability_20261004.md)。
+趋势、比较和诊断任务必须先确认结构化范围，再由程序执行查询、核验、辅助查证和图表；范围缺失仅允许一次规划补正，不再落回自由决策循环。模型调用上限仍为 6，最后一个名额预留给报告。中途预算或模型失败时，已有可用结果会保留为未完成，不自动重跑工具。普通和流式接口新增安全 `diagnostics` 摘要，`usage.calls[].phase` 标记规划/决策/报告；失败摘要也保存在会话历史。实现、验证边界及复测建议见 [执行可靠性修复记录](../docs/archive/execution_reliability_20261004.md)。
 
 ## 回答完整性与辅助查证
 
 结构化单表变化分析现在会记录本轮应回答的要求：趋势、维度拆解、明确要求的折线图/贡献图，以及适用的订单量、客单价和供货记录。辅助数据必须沿用主分析范围，并与独立销售额总额核对；未核对成功不能宣布完成。对已确认可加总的订单数，程序按总销售额/总订单量计算客单价，再做对称机械分解。演示表的供货状态与缺货记录仅用于关联查证，不能证明因果，也不能把跨品类缺货记录相加为自然日。
 
-追问继承当前表、指标、比较范围与筛选，澄清后的补充保留原问题。最终报告减少重复数字和内部工具术语；如果遗漏已核验的关键计算，程序补充有限的证据摘要，不额外调用模型。这不是通用多指标分析或完整自然语言事实校验器：未知订单粒度、额外主指标或不支持的图形先澄清，不静默漏答。统一测试步骤及实现边界见 [回答质量阶段二](../outputs/answer_quality_20261004.md)。
+追问继承当前表、指标、比较范围与筛选，澄清后的补充保留原问题。最终报告减少重复数字和内部工具术语；如果遗漏已核验的关键计算，程序补充有限的证据摘要，不额外调用模型。这不是通用多指标分析或完整自然语言事实校验器：未知订单粒度、额外主指标或不支持的图形先澄清，不静默漏答。统一测试步骤及实现边界见 [回答质量阶段二](../docs/archive/answer_quality_20261004.md)。
 
 ## 文字报告中断时的结果保留
 
@@ -18,7 +18,7 @@
 
 API `usage.calls` 新增 `finish_reason`；状态区分 `output_limit`、`timeout` 和 `stream_error`。若收到模型末尾的 usage，仍记录实际 Token；未收到则保持未知，不估成零。程序另外提供最高/最低值的全部对应月份，以及相邻返回月份是否间隔一个月，避免把跨月变化称为月环比。这些事实与提示词约束仍不等于完整的自然语言事实校验器。
 
-本次本地检查与部署记录见 [回答可靠性阶段一](../outputs/report_reliability_20261004.md)。没有新增真实模型调用；不能据此宣称远程网络问题已解决或真实回答已验收通过。
+本次本地检查与部署记录见 [回答可靠性阶段一](../docs/archive/report_reliability_20261004.md)。没有新增真实模型调用；不能据此宣称远程网络问题已解决或真实回答已验收通过。
 
 ## 报告表达边界
 
@@ -34,7 +34,7 @@ API `usage.calls` 新增 `finish_reason`；状态区分 `output_limit`、`timeou
 
 逐期归因支持最多 30 个返回时期、100 行未截断明细；贡献图沿用最多 30 个数据点的限制。仅适用于单表可加总指标和一个拆解维度，不支持均值/比率归因、跨表关联或因果识别。缺失时期不能直接当作零；这里只比较实际返回的相邻时期。针对性检查可运行 `python -m unittest tests.test_trend_breakdown tests.test_analysis_context -v`。
 
-本次前端真实验收的结果和未通过项见 [复合分析验收记录](../outputs/trend_breakdown_acceptance_20261004.md)。本地检查通过不等于真实模型验收通过。
+本次前端真实验收的结果和未通过项见 [复合分析验收记录](../docs/archive/trend_breakdown_acceptance_20261004.md)。本地检查通过不等于真实模型验收通过。
 
 ## Token 运行观测
 
@@ -46,7 +46,7 @@ API `usage.calls` 新增 `finish_reason`；状态区分 `output_limit`、`timeou
 
 供应商未返回用量时字段为 `null`，`complete=false`；没有模型调用时才是 0。格式失败后的重试消耗也计入汇总。SDK 隐式网络重试已关闭，避免不可见的额外调用。模型失败响应保留原有 `detail`，额外返回 `usage`；失败轮次的用量也保存到会话历史。
 
-20 轮同会话真实测试及发现的问题见 [Token 测试报告](../outputs/token_benchmark_report.md)。本次总消耗 294,848 Token、53 次模型调用，不能据此宣称所有分析问题都已正确完成。
+20 轮同会话真实测试及发现的问题见 [Token 测试报告](../docs/archive/token_benchmark_report.md)。本次总消耗 294,848 Token、53 次模型调用，不能据此宣称所有分析问题都已正确完成。
 
 当前进度是 V6：在 V5 的容器、数据导入、会话和图表基础上，加入按问题类型分流的分析任务、变化诊断的证据闭环和基础字段语义约束。它仍是本机演示项目，不应以“完全自主数据科学”或企业生产系统对外描述。
 
@@ -58,7 +58,7 @@ API `usage.calls` 新增 `finish_reason`；状态区分 `output_limit`、`timeou
 
 已有数据库首次使用此版本前运行 `sh docker/migrate_session.sh`，为会话表增量增加 `analysis_context` 和 `artifacts` 字段；已有记录保留。再运行 `docker compose up -d --no-deps --build api ui` 更新服务。本地验收已应用该升级。
 
-目前支持单表、可加总数值指标（含数量×单价等表达式）、两个互不重叠时期或两个群体，以及逐轮选择维度下钻。缺少字段时会提示；比率、均值的归因、跨表关联和因果识别尚未支持。用法与可核对的演示数字见 [多层下钻验收指南](../outputs/v6_drilldown_guide.md)。
+目前支持单表、可加总数值指标（含数量×单价等表达式）、两个互不重叠时期或两个群体，以及逐轮选择维度下钻。缺少字段时会提示；比率、均值的归因、跨表关联和因果识别尚未支持。用法与可核对的演示数字见 [多层下钻验收指南](../docs/archive/v6_drilldown_guide.md)。
 
 ## V6：变化诊断与证据闭环
 
@@ -182,7 +182,7 @@ Python Tool 接受结构化计算参数，分析 SQL 返回的行；它不执行
 
 ```env
 LLM_API_KEY=你的密钥
-LLM_API_ID=deepseek-chat
+LLM_API_ID=deepseek-flash
 LLM_BASE_URL=https://api.deepseek.com
 DATABASE_URL=postgresql://agent_reader:你的密码@localhost:5432/agent_db
 ```
@@ -201,7 +201,7 @@ GRANT CONNECT ON DATABASE agent_db TO agent_reader;
 
 然后切换连接到 `agent_db`，导入测试数据脚本。连接串中的密码如果含有 `@`、`:`、`/` 等字符，需要按 URL 规则编码。
 
-可以用 [sample_sales.sql](../outputs/sample_sales.sql) 在测试数据库中创建 `public.agent_sales_sample` 并插入 9 条数据。导入请使用有建表权限的账号；随后给 Agent 使用的只读账号授予该表的 `SELECT` 权限。例如在 PostgreSQL 管理工具中执行：
+可以用 [sample_sales.sql](../examples/sql/sample_sales.sql) 在测试数据库中创建 `public.agent_sales_sample` 并插入 9 条数据。导入请使用有建表权限的账号；随后给 Agent 使用的只读账号授予该表的 `SELECT` 权限。例如在 PostgreSQL 管理工具中执行：
 
 ```sql
 GRANT USAGE ON SCHEMA public TO agent_reader;
@@ -214,7 +214,7 @@ GRANT SELECT ON public.agent_sales_sample TO agent_reader;
 
 业务查询仍使用 `DATABASE_URL` 中的只读账号。保存对话需要**另一个专用写入账号**，不要把 `agent_reader` 改成可写，也不要把数据库管理员账号填进应用配置。
 
-1. 在 PyCharm Terminal 中用有建表权限的本地账号连接 `agent_db`：`psql -d agent_db`。确认提示符是 `agent_db=#`，再执行 `\i outputs/session_schema.sql`，创建两张会话表。不要在 `psql` 提示符下输入另一条 `psql -d ...` 命令。
+1. 在 PyCharm Terminal 中用有建表权限的本地账号连接 `agent_db`：`psql -d agent_db`。确认提示符是 `agent_db=#`，再执行 `\i docker/db/session_schema.sql`，创建两张会话表。不要在 `psql` 提示符下输入另一条 `psql -d ...` 命令。
 2. 仍在 `agent_db=#` 下，为会话创建专用账号并授权（密码自己设置，不要发给我）：
 
    ```sql
@@ -293,13 +293,13 @@ python view_session_history.py 这里替换成真实的session_id
 
 响应中的 `timings_ms` 是耗时（毫秒）：`schema` 为读取表结构，`llm_round_1`、`llm_round_2` 为每次调用模型，`sql_round_1` 为执行 SQL，`total` 为整次分析。用这些数字判断等待主要发生在哪一步。
 
-Python Tool 的调用会在 `steps` 中显示 `action: "python"`，耗时显示为 `python_round_N`。参见 [V1.2 手动测试指南](../outputs/python_tool_test_guide.md)。
+Python Tool 的调用会在 `steps` 中显示 `action: "python"`，耗时显示为 `python_round_N`。参见 [V1.2 手动测试指南](../docs/archive/python_tool_test_guide.md)。
 
-V2 的 Pandas 检查和图表测试见 [V2 手动测试指南](../outputs/v2_test_guide.md)。
+V2 的 Pandas 检查和图表测试见 [V2 手动测试指南](../docs/archive/v2_test_guide.md)。
 
-V2.1 的两期维度归因测试见 [V2.1 手动测试指南](../outputs/v2_1_attribution_test_guide.md)。
+V2.1 的两期维度归因测试见 [V2.1 手动测试指南](../docs/archive/v2_1_attribution_test_guide.md)。
 
-想测试新加的“判断是否查询、按数据分析、谨慎下结论”流程，请看 [分析流程手动测试指南](../outputs/analysis_flow_test_guide.md)。
+想测试新加的“判断是否查询、按数据分析、谨慎下结论”流程，请看 [分析流程手动测试指南](../docs/archive/analysis_flow_test_guide.md)。
 
 截断保护已在真实接口上用只读查询复测：把 `public.agent_sales_sample` 与 `generate_series(1,17)` 交叉连接，查询超过 100 行时，`steps` 中显示 `row_count: 100`、`truncated: true`，响应 `finished: false`，并提示缩小查询范围。这个测试不向数据库插入数据。自动化边界测试可运行 `python -m unittest discover -s tests -v`。
 

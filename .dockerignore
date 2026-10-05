@@ -6,9 +6,12 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 outputs/*
-!outputs/session_schema.sql
 tests/
 work/
+scripts/
+docs/
+examples/
+.github/
 README.md
 *.log
 web/node_modules/

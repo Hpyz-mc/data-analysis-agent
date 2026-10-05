@@ -30,6 +30,7 @@ QUESTIONS = [
 
 
 def main():
+    Path("outputs").mkdir(exist_ok=True)
     rows, session_id = [], None
     for index, question in enumerate(QUESTIONS, 1):
         body = {"question": question}

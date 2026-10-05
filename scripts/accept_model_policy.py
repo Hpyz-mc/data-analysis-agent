@@ -13,6 +13,7 @@ def amounts(result):
 
 
 def main():
+    Path("outputs").mkdir(exist_ok=True)
     records, session_id = [], None
     cases = [
         ("请查询 demo_ecommerce_orders 中2026年1至3月每月销售额，按 sales_amount 求和。", [666000, 652300, 702600]),

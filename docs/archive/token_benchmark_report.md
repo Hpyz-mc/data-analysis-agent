@@ -80,4 +80,4 @@ HTTP 200 共 20 轮，其中 19 轮 `finished=true`，1 轮为预期澄清。**�
 
 完整原始结果见 `token_benchmark_20_turns.json`，包含问题、回答、工具记录、耗时和每次模型用量，不包含密钥。该文件可能在以后复测时包含业务内容，请不要直接公开敏感结果。
 
-项目根目录运行 `.venv/bin/python work/token_benchmark.py` 可创建新的测试会话，再执行 20 轮真实调用（会产生费用）。脚本会覆盖本报告对应的原始 JSON 文件，复测前需自行保留旧文件；本 Markdown 报告不会自动更新。
+项目根目录运行 `python -m scripts.token_benchmark` 可创建新的测试会话，再执行 20 轮真实调用（会产生费用）。脚本会覆盖本报告对应的原始 JSON 文件，复测前需自行保留旧文件；本 Markdown 报告不会自动更新。
