@@ -1,0 +1,15 @@
+.env
+.venv/
+.idea/
+.git/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+outputs/*
+!outputs/session_schema.sql
+tests/
+work/
+README.md
+*.log
+web/node_modules/
+web/dist/

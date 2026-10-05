@@ -1,0 +1,1 @@
+{"name":"data-agent-workbench","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"vite --host 127.0.0.1 --port 8503","build":"tsc --noEmit && vite build"},"dependencies":{"react":"19.3.0","react-dom":"19.3.0","react-markdown":"latest","remark-gfm":"latest"},"devDependencies":{"vite":"8.3.2","typescript":"7.0.2","@types/react":"19.3.0","@types/react-dom":"19.3.0"}}

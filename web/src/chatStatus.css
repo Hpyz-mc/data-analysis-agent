@@ -1,0 +1,25 @@
+.run-status { border: 1px solid #dfe7f5; border-radius: 9px; padding: 14px 16px; background: #f7f9fe; margin-bottom: 18px; }
+.run-status-top { display: flex; align-items: center; gap: 9px; }
+.run-status-top strong { color: #425f8c; font-size: 13px; font-weight: 600; }
+.run-status-top button { margin-left: auto; border: 1px solid #d4deef; background: white; color: #526b91; padding: 6px 10px; border-radius: 5px; font-size: 11px; }
+.run-status > p { color: #526b91; font-size: 12px; margin: 10px 0 5px; }
+.run-status > small { display: block; font-size: 11px; color: #64748b; line-height: 1.8; }
+.failure-notice { border: 1px solid #edddd1; border-radius: 9px; background: #fffaf6; padding: 16px; margin-bottom: 18px; color: #865e47; }
+.failure-notice strong { font-size: 14px; color: #78523d; }
+.failure-notice p { font-size: 12px; line-height: 1.85; margin: 8px 0; overflow-wrap: anywhere; }
+.failure-notice > small { display: block; font-size: 11px; line-height: 1.8; margin: 10px 0; }
+.failure-notice details { font-size: 11px; color: #64748b; margin-top: 10px; }
+.failure-notice summary { cursor: pointer; }
+.failure-notice details p { font-size: 11px; }
+.failure-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.failure-actions button { border: 1px solid #e1d6cb; border-radius: 5px; padding: 7px 10px; font-size: 11px; background: white; }
+.failure-actions > span { flex-basis: 100%; color: #64748b; font-size: 11px; line-height: 1.7; }
+.stopped-notice { border-color: #e1e6ee; background: #f7f9fc; color: #64748b; }
+.stopped-notice strong { color: #475569; }
+.partial-answer { border-left: 2px solid #d4dce8; padding-left: 13px; opacity: .8; }
+.composer-stop { margin-left: auto; border: 1px solid #d4deef; background: #f4f7fc; color: #526b91; padding: 6px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; }
+@media(max-width:640px) {
+  .run-status, .failure-notice { padding: 13px; }
+  .run-status-top button, .composer-stop { font-size: 10px; padding: 6px 8px; }
+  .composer-stop + .send { display: none; }
+}

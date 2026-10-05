@@ -1,0 +1,6 @@
+import type {ReactNode} from 'react';
+export type IconName='spark'|'plus'|'chat'|'database'|'arrow'|'panel'|'search'|'close'|'check'|'upload'|'download'|'trash'|'file'|'expand';
+const paths:Record<IconName,ReactNode>={
+ spark:<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>,plus:<path d="M12 5v14M5 12h14"/>,chat:<path d="M20 15a3 3 0 0 1-3 3H9l-5 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z"/>,
+ database:<><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></>,arrow:<path d="M12 19V5m-6 6 6-6 6 6"/>,panel:<><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></>,search:<><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></>,close:<path d="m6 6 12 12M18 6 6 18"/>,check:<path d="m5 12 4 4L19 6"/>,upload:<path d="M12 16V3m-5 5 5-5 5 5M4 16v4h16v-4"/>,download:<path d="M12 3v13m-5-5 5 5 5-5M4 16v4h16v-4"/>,trash:<><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></>,file:<><path d="M14 3H5v18h14V8Z"/><path d="M14 3v5h5M8 13h8m-8 4h6"/></>,expand:<path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/>};
+export function Icon({name,size=18}:{name:IconName;size?:number}){return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>}
