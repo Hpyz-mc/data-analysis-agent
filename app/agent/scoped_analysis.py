@@ -158,6 +158,11 @@ def align_breakdown_intent(context: AnalysisContext, question: str, schema: str)
     """Keep an explicitly requested breakdown even if the model omitted it."""
     matches = requested_breakdown_labels(question)
     if not matches:
+        # 走势/趋势问题未显式要求拆解维度时，清除模型或追问继承的维度
+        if context.dimension and re.search(r"走势|趋势", question) \
+                and not re.search(r"为什么|为何|原因|归因|拆解|下钻|变化来源|贡献", question):
+            context = context.model_copy(deep=True)
+            context.dimension = None
         return context
     aliases = {
         "渠道": {"channel", "渠道", "销售渠道"},
@@ -314,8 +319,9 @@ def align_time_intent(context: AnalysisContext, question: str, schema: str) -> A
     """Explicit user grain wins over a model's accidental range-total plan."""
     grain = requested_time_grain(question)
     if grain is None:
-        if context.kind == "lookup" and re.search(r"合计|总计|总额", question):
+        if re.search(r"合计|总计|总额", question) and context.kind in {"lookup", "trend"}:
             context = context.model_copy(deep=True)
+            context.kind = "lookup"
             context.time_grain = None
         return context
     context = context.model_copy(deep=True)

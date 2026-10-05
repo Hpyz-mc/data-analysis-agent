@@ -120,6 +120,19 @@ class RegressionChecks(unittest.TestCase):
         # 无拆解维度只生成一条总额查询，不生成归因/图表。
         self.assertEqual([item["action"] for item in pipeline], ["sql"])
 
+    def test_7_total_after_trend_clears_time_grain(self):
+        from app.agent.scoped_analysis import align_time_intent
+        ctx = context(kind="trend", source_table="public.sales", time_grain="month")
+        ctx = align_time_intent(ctx, "那这三个月销售额合计多少？", "public.sales: amount (numeric), order_date (date)")
+        self.assertEqual(ctx.kind, "lookup")
+        self.assertIsNone(ctx.time_grain)
+
+    def test_8_trend_after_attribution_clears_dimension(self):
+        from app.agent.scoped_analysis import align_breakdown_intent
+        ctx = context(kind="trend", source_table="public.sales", dimension="channel")
+        ctx = align_breakdown_intent(ctx, "查看两个比较月份的月度走势", "public.sales: amount (numeric), order_date (date), channel (text)")
+        self.assertIsNone(ctx.dimension)
+
 
 if __name__ == "__main__":
     unittest.main()
