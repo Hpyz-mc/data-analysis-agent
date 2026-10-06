@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.idea/
+outputs/charts/
+outputs/*.json
+web/node_modules/
+web/dist/

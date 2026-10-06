@@ -1,0 +1,113 @@
+/* Readable typography and compact, task-focused empty states. */
+.markdown {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.85;
+}
+.markdown h1 { color: #1e293b; }
+.markdown h2 { color: #24344b; font-size: 21px; }
+.markdown h3 { color: #334155; font-size: 17px; }
+.markdown strong { color: #273449; }
+.markdown code { color: #475569; font-size: 13px; }
+.markdown th, .markdown td { font-size: 13px; }
+.markdown th { color: #475569; font-weight: 600; }
+.markdown td { color: #334155; font-variant-numeric: tabular-nums; }
+.question-bubble { color: #334155; font-size: 14px; }
+.answer-byline { font-size: 13px; }
+.answer-byline span, .answer-meta { color: #64748b; font-size: 11px; }
+.chart-header h3 { color: #334155; font-size: 14px; }
+.chart-header p { color: #64748b; font-size: 11px; }
+.markdown .report-inline-chart { margin: 16px 0 22px; }
+.markdown .report-inline-chart h3 { margin: 0; font-size: 14px; }
+.markdown .report-inline-chart .chart-header p { margin: 5px 0 0; font-size: 11px; }
+.markdown .chart-unavailable { padding: 14px 18px; font-size: 12px; color: #64748b; }
+.followups > span { color: #64748b; font-size: 12px; }
+.followups button { color: #475569; font-size: 12px; }
+.evidence-details, .evidence-details p { color: #475569; font-size: 12px; }
+.evidence-details summary > span { color: #64748b; font-size: 11px; }
+.live-progress { color: #3f5d89; font-size: 13px; }
+
+.nav-item { color: #475569; }
+.nav-label { color: #64748b; font-size: 12px; }
+.session-open > span { color: #475569; font-size: 13px; }
+.active .session-open > span { color: #264e9b; }
+.session-open small { color: #64748b; font-size: 11px; }
+.search input { color: #334155; font-size: 12px; }
+.search input::placeholder { color: #64748b; }
+.count, .sandbox-note, .profile small, .empty-search { color: #64748b; }
+.profile small { font-size: 11px; }
+
+/* Constrain the grid item so long history lists scroll instead of growing
+   beyond the viewport and being clipped by .app's overflow:hidden. */
+.sidebar {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.sidebar > :not(.history) { flex-shrink: 0; }
+.sidebar .history {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #bdc9db transparent;
+}
+.sidebar .history::-webkit-scrollbar { width: 7px; }
+.sidebar .history::-webkit-scrollbar-thumb {
+  background: #bdc9db;
+  border-radius: 8px;
+}
+.sidebar .history::-webkit-scrollbar-thumb:hover { background: #94a6c2; }
+
+.breadcrumb { color: #64748b; font-size: 12px; }
+.breadcrumb strong { color: #475569; }
+.demo-badge { color: #64748b; font-size: 11px; }
+
+.composer textarea { color: #334155; font-size: 15px; }
+.composer textarea::placeholder { color: #64748b; }
+.composer-bottom > span { color: #64748b; font-size: 11px; }
+.composer-area > p { color: #64748b; font-size: 11px; }
+.composer-dataset { color: #475569; font-size: 11px; }
+.dataset-chip { color: #334155; font-size: 14px; }
+.dataset-chip > span { color: #64748b; font-size: 12px; }
+.welcome > p, .muted { color: #64748b; font-size: 14px; }
+.eyebrow { color: #64748b; font-size: 12px; }
+.welcome-foot { color: #64748b; font-size: 12px; }
+.dataset-card-head p, .dataset-meta, .dataset-footer > span { color: #64748b; font-size: 11px; }
+.table-scroll th { color: #475569; }
+.table-scroll td { color: #475569; }
+.table-scroll th, .table-scroll td { font-size: 12px; }
+.upload-box h3 { color: #334155; font-size: 15px; }
+.upload-box p { color: #64748b; font-size: 12px; }
+.upload-box > small { color: #64748b; font-size: 11px; }
+.outline-button, .primary-button { font-size: 12px; }
+
+/* Keep entry actions compact; all chat composers stay bottom-pinned. */
+.workspace.is-empty .welcome {
+  width: 100%;
+  max-width: 854px;
+  margin: clamp(24px, 5vh, 56px) auto 0;
+  padding: 24px 32px 8px;
+}
+.workspace.is-empty .welcome h1 { margin: 12px 0; }
+.workspace.is-empty .welcome > p { margin-bottom: 18px; }
+.workspace.is-empty .dataset-chip { margin: 18px 0 0; }
+.workspace.is-empty .welcome-foot { justify-content: flex-start; margin-top: 18px; }
+
+@media (max-width: 640px) {
+  .markdown { font-size: 14px; }
+  .markdown h2 { font-size: 19px; }
+  .markdown h3 { font-size: 16px; }
+  .markdown th, .markdown td { font-size: 12px; }
+  .question-bubble { font-size: 13px; }
+  .composer textarea { font-size: 16px; }
+  .composer-area > p { font-size: 10px; }
+  .workspace.is-empty .welcome { margin-top: 16px; padding: 20px 18px 6px; }
+  .workspace.is-empty .welcome h1 { font-size: 27px; }
+  .workspace.is-empty .welcome > p { font-size: 13px; }
+  .dataset-chip { flex-wrap: wrap; gap: 7px; font-size: 12px; }
+  .dataset-chip > span { font-size: 11px; }
+  .welcome-foot { font-size: 11px; }
+}

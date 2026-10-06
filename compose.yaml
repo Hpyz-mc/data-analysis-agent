@@ -1,0 +1,67 @@
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/db/Dockerfile
+    environment:
+      POSTGRES_DB: agent_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DOCKER_POSTGRES_PASSWORD:?Set DOCKER_POSTGRES_PASSWORD in the existing .env}
+      DOCKER_READER_PASSWORD: ${DOCKER_READER_PASSWORD:?Set DOCKER_READER_PASSWORD in the existing .env}
+      DOCKER_SESSION_PASSWORD: ${DOCKER_SESSION_PASSWORD:?Set DOCKER_SESSION_PASSWORD in the existing .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agent_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:?Set LLM_API_KEY in the existing .env}
+      LLM_API_ID: ${LLM_API_ID:-deepseek-flash}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_THINKING: ${LLM_THINKING:-disabled}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      LLM_REQUEST_DEADLINE_SECONDS: ${LLM_REQUEST_DEADLINE_SECONDS:-180}
+      LLM_NETWORK_RETRIES: ${LLM_NETWORK_RETRIES:-1}
+      LLM_MAX_CALLS: ${LLM_MAX_CALLS:-6}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-1800}
+      LLM_PROMPT_TOKEN_BUDGET: ${LLM_PROMPT_TOKEN_BUDGET:-24000}
+      LLM_REQUEST_TOKEN_BUDGET: ${LLM_REQUEST_TOKEN_BUDGET:-50000}
+      DATABASE_URL: postgresql://agent_reader:${DOCKER_READER_PASSWORD:?Set DOCKER_READER_PASSWORD in the existing .env}@db:5432/agent_db
+      SESSION_DATABASE_URL: postgresql://agent_session_writer:${DOCKER_SESSION_PASSWORD:?Set DOCKER_SESSION_PASSWORD in the existing .env}@db:5432/agent_db
+      MPLCONFIGDIR: /tmp/matplotlib
+    ports:
+      - "127.0.0.1:${DOCKER_APP_PORT:-8001}:8000"
+    volumes:
+      - chart_data:/app/outputs/charts
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports:
+      - "127.0.0.1:${DOCKER_UI_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chart_data:
