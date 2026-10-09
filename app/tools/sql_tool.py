@@ -162,7 +162,7 @@ class SQLTool:
                         "SELECT set_config('statement_timeout', %s, true)",
                         (str(self.timeout_ms),),
                     )
-                    cur.execute("SET LOCAL search_path = public, pg_catalog")
+                    cur.execute("SET LOCAL search_path = pg_catalog, public")
                     cur.execute(safe_sql)
                     rows = cur.fetchmany(self.max_rows + 1)
         except psycopg.Error as exc:

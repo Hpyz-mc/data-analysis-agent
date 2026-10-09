@@ -17,6 +17,9 @@ from app.agent.context import AnalysisContext
 
 logger = logging.getLogger("uvicorn.error")
 TurnStatus = Literal["completed", "incomplete", "failed"]
+# Two-integer advisory locks have a separate namespace from per-session UUID
+# bigint locks. Active work shares this guard; clearing all sessions excludes it.
+SESSION_GUARD_KEY = (1145132097, 1)
 
 
 def _display_question(question: str) -> str:
@@ -114,6 +117,14 @@ class SessionStore:
         except psycopg.Error as exc:
             raise SessionStorageError("无法连接会话数据库，请检查会话账号和数据库状态。") from exc
 
+    @staticmethod
+    def _acquire_guard(connection: psycopg.Connection, *, exclusive: bool = False) -> None:
+        function = "pg_try_advisory_lock" if exclusive else "pg_try_advisory_lock_shared"
+        with connection.cursor() as cur:
+            cur.execute(f"SELECT {function}(%s, %s) AS acquired", SESSION_GUARD_KEY)
+            if not cur.fetchone()["acquired"]:
+                raise SessionBusyError("有分析或会话清理正在进行，请稍后再试。")
+
     @contextmanager
     def begin_turn(self, session_id: UUID | None, question: str) -> Iterator[ActiveTurn]:
         """Serialize work per session; stale running turns become interrupted."""
@@ -122,6 +133,7 @@ class SessionStore:
         try:
             lock_key = int.from_bytes(selected_id.bytes[:8], "big", signed=True)
             try:
+                self._acquire_guard(connection)
                 with connection.cursor() as cur:
                     cur.execute("SELECT pg_try_advisory_lock(%s) AS acquired", (lock_key,))
                     if not cur.fetchone()["acquired"]:
@@ -263,10 +275,7 @@ class SessionStore:
         connection = self._connect()
         try:
             try:
-                with connection.cursor() as cur:
-                    cur.execute("SELECT pg_try_advisory_lock(9223372036854775806) AS acquired")
-                    if not cur.fetchone()["acquired"]:
-                        raise SessionBusyError("正在处理上一条问题，请稍后再试。")
+                self._acquire_guard(connection, exclusive=True)
                 with connection.transaction():
                     with connection.cursor() as cur:
                         cur.execute("DELETE FROM public.analysis_turns")
@@ -282,6 +291,7 @@ class SessionStore:
         try:
             lock_key = int.from_bytes(session_id.bytes[:8], "big", signed=True)
             try:
+                self._acquire_guard(connection)
                 with connection.cursor() as cur:
                     cur.execute("SELECT pg_try_advisory_lock(%s) AS acquired", (lock_key,))
                     if not cur.fetchone()["acquired"]:

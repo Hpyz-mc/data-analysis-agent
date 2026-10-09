@@ -9,6 +9,7 @@ from sqlglot.optimizer.scope import traverse_scope
 
 from app.agent.scoped_analysis import METRIC_ALIASES, ScopeError, schema_columns
 from app.agent.answer_contract import ALIASES
+from app.tools.sql_validator import SQLValidationError, validate_read_only_sql
 
 
 def normalize_source(value: str) -> str:
@@ -44,6 +45,10 @@ def resolve_source(question: str, schema: str, selected: str | None, previous=No
 
 
 def sql_source_error(sql: str, source: str | None) -> str | None:
+    try:
+        validate_read_only_sql(sql)
+    except SQLValidationError as exc:
+        return str(exc)
     if source is None:
         return None
     try:

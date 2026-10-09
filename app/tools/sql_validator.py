@@ -18,6 +18,40 @@ FORBIDDEN_NODES = (
     exp.Into,
 )
 
+# Keep this intentionally narrow. SELECT alone is not safe: XML export and
+# dynamic-query functions can read tables hidden inside string arguments.
+ALLOWED_FUNCTIONS = frozenset({
+    "SUM", "COUNT", "AVG", "MIN", "MAX", "CORR", "ARRAY_AGG", "STDDEV", "STDDEV_POP",
+    "STDDEV_SAMP", "VARIANCE", "VAR_POP", "VAR_SAMP", "PERCENTILE_CONT",
+    "PERCENTILE_DISC", "ABS", "ROUND", "TRUNC", "FLOOR", "CEIL", "CEILING",
+    "POWER", "SQRT", "LN", "LOG", "EXP", "MOD", "COALESCE", "NULLIF",
+    "GREATEST", "LEAST", "DATE_TRUNC", "DATE_PART", "TO_CHAR", "TO_DATE",
+    "TO_TIMESTAMP", "LOWER", "UPPER", "LENGTH", "CHAR_LENGTH", "TRIM",
+    "BTRIM", "LTRIM", "RTRIM", "SUBSTRING", "REPLACE", "CONCAT",
+    "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE", "LAG", "LEAD",
+    "FIRST_VALUE", "LAST_VALUE", "GENERATE_SERIES",
+})
+# sqlglot normalizes PostgreSQL syntax/functions to these internal names.
+ALLOWED_NORMALIZED_FUNCTIONS = ALLOWED_FUNCTIONS | {
+    "CAST", "CASE", "IF", "AND", "OR", "EXISTS", "EXTRACT", "TIMESTAMP_TRUNC", "TIME_TO_STR",
+    "STR_TO_DATE", "STR_TO_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP",
+}
+
+
+def _validate_functions(expression: exp.Expression) -> None:
+    for function in expression.find_all(exp.Func):
+        if isinstance(function.parent, exp.Dot):
+            namespace = function.parent.this
+            if (not isinstance(namespace, exp.Identifier)
+                    or namespace.name != "pg_catalog"):
+                raise SQLValidationError("SQL 不允许调用业务 schema 或外部 schema 中的函数。")
+        if isinstance(function, exp.Anonymous):
+            name, allowed = function.name.upper(), ALLOWED_FUNCTIONS
+        else:
+            name, allowed = function.sql_name(), ALLOWED_NORMALIZED_FUNCTIONS
+        if name not in allowed:
+            raise SQLValidationError(f"SQL 函数 {name} 不在允许的分析函数列表中。")
+
 
 def validate_read_only_sql(sql: str) -> str:
     statement = sql.strip()
@@ -44,5 +78,6 @@ def validate_read_only_sql(sql: str) -> str:
     internal_tables = {"system_upload_records", "analysis_sessions", "analysis_turns"}
     if any(table.name.lower() in internal_tables for table in expression.find_all(exp.Table)):
         raise SQLValidationError("SQL 不允许访问平台内部管理表。")
+    _validate_functions(expression)
 
     return statement

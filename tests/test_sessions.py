@@ -374,7 +374,7 @@ class SessionTests(unittest.TestCase):
         connection.cursor.return_value.__enter__.return_value = cursor = MagicMock()
         connection.transaction.return_value.__enter__.return_value = MagicMock()
         cursor.fetchone.side_effect = [
-            {"acquired": True}, {"turn_no": 42},
+            {"acquired": True}, {"acquired": True}, {"turn_no": 42},
         ]
         cursor.fetchall.return_value = []
         cursor.rowcount = 1
@@ -386,6 +386,7 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(connection.close.called)
         executed_sql = " ".join(call.args[0] for call in cursor.execute.call_args_list)
         self.assertIn("pg_try_advisory_lock", executed_sql)
+        self.assertIn("pg_try_advisory_lock_shared", executed_sql)
         self.assertIn("INSERT INTO public.analysis_turns", executed_sql)
         self.assertIn("status = %s", executed_sql)
 

@@ -12,6 +12,7 @@ from app.agent.semantics import semantic_sql_error
 from app.agent.context import AnalysisContext, is_followup, merge_context
 from app.agent.intent import grain_feedback
 from app.agent.source_scope import normalize_source, resolve_source, sql_source_error, missing_field_error
+from app.agent.clarification import clarify_followup
 from app.agent.diagnostics import AnalysisDiagnostics, tool_receipts
 from app.agent.report_fallback import partial_report
 from app.agent.report_presentation import ensure_evidence_sections, outlier_report
@@ -112,7 +113,8 @@ class DataAnalysisAgent:
                 and not _NON_ANALYSIS.search(question)
                 and not re.search(r"查询|分析|走势|趋势|占比|构成|排名|前\s*\d|十分位|分层"
                                   r"|相关|截尾|缩尾|客单价|平均|最高|最低|画|图|哪个|哪些|多少|为什么|为何", question)):
-            task_question = f"{conversation_history[-1].question}；用户补充：{question}"
+            previous = conversation_history[-1]
+            task_question = clarify_followup(previous.question, previous.answer, question)
         task = build_analysis_task(task_question)
         if is_followup(question, analysis_context) and task.kind in {"lookup", "clarification"}:
             task.kind = analysis_context.kind

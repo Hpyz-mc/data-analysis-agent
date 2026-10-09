@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyzeStream,APIError} from '../src/api.ts';
-import {failureInfo,answerLabel,canShowArtifacts,progressStage} from '../src/chatStatus.ts';
+import {failureInfo,answerLabel,canShowArtifacts,progressStage,SESSION_CLEAR_NOTICE} from '../src/chatStatus.ts';
+
+test('clear-all confirmation distinguishes deleted history from retained chart files',()=>{
+ assert.match(SESSION_CLEAR_NOTICE,/永久删除所有会话及聊天记录/);
+ assert.match(SESSION_CLEAR_NOTICE,/数据表及生成的图表文件不会被删除/);
+});
 
 test('stopped and failed drafts cannot present charts or completed labels',()=>{
  for(const status of ['running','stopped','failed']) assert.equal(canShowArtifacts(status),false);

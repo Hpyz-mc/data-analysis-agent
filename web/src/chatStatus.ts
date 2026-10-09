@@ -2,6 +2,8 @@ import {APIError} from './api.ts';
 
 export type Failure = {kind:'stopped'|'busy'|'budget'|'timeout'|'connection'|'missing'|'service';title:string;detail:string;hint:string};
 
+export const SESSION_CLEAR_NOTICE='将永久删除所有会话及聊天记录，无法从页面恢复；已导入的数据表及生成的图表文件不会被删除。';
+
 export function failureInfo(error:unknown,stopped=false):Failure {
   const detail=error instanceof Error?error.message:'分析暂时未完成，请稍后重试。';
   if(stopped)return {kind:'stopped',title:'已停止接收回答',detail:'你已停止本次等待。',hint:'服务端可能仍在结束处理；请先查看最新历史。已发生的模型消耗不会撤回。'};
