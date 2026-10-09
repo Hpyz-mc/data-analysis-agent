@@ -18,7 +18,7 @@ import './chatStatus.css';
 const formatTime=(value:string)=>new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const errorText=(error:unknown)=>error instanceof Error?error.message:'操作暂时未完成，请重试。';
 const ids=()=>crypto.randomUUID();
-type Turn={turn_no:number;question:string;answer:string|null;status:string;charts?:string[];suggestions?:Result['suggestions'];analysis_context?:Scope|null;session_context?:Scope|null;context_reset?:boolean};
+type Turn={turn_no:number;question:string;answer:string|null;status:string;source_table?:string|null;charts?:string[];suggestions?:Result['suggestions'];analysis_context?:Scope|null;session_context?:Scope|null;context_reset?:boolean};
 
 function scopeFromTurns(turns:Turn[]){let scope:Scope|null=null;for(const turn of turns){if(turn.context_reset)scope=null;else if(turn.session_context||turn.analysis_context)scope=turn.session_context||turn.analysis_context||null}return scope}
 function chartPaths(message:Message){return message.result?.charts||message.charts||[]}
@@ -95,14 +95,14 @@ function App(){
    setSession(item.session_id);
    setMessages(history.turns.flatMap(turn=>{
     const unfinished=turn.status==='failed'||turn.status==='running';
-    const source=(turn.session_context||turn.analysis_context||current)?.source_table.replace(/^public\./,'')||turn.question.match(/^使用数据表 public\.([\p{L}\p{N}_]+)。/u)?.[1]||'';
+    const source=(turn.source_table||(turn.session_context||turn.analysis_context||current)?.source_table)?.replace(/^public\./,'')||turn.question.match(/^使用数据表 public\.([\p{L}\p{N}_]+)。/u)?.[1]||'';
     return [{id:`${turn.turn_no}-u`,role:'user' as const,content:displayQuestion(turn.question)},
      {id:`${turn.turn_no}-a`,role:'assistant' as const,content:turn.answer||'',status:unfinished?'failed':turn.status,
       charts:turn.charts,suggestions:turn.suggestions,context:turn.analysis_context,
       ...(unfinished?{failure:turn.status==='running'?failureInfo(new APIError(409,'历史记录显示本轮尚未结束。')):failureInfo(new Error('历史记录显示本轮失败，未保存成功回答。')),retry:{question:displayQuestion(turn.question),sourceTable:source}}:{})}];
    }));
    setMemory(current);setScope(history.turns.at(-1)?.analysis_context||null);
-   setSelected((history.turns.at(-1)?.analysis_context||current)?.source_table.replace(/^public\./,'')||'');
+   setSelected((history.turns.at(-1)?.source_table||(history.turns.at(-1)?.analysis_context||current)?.source_table)?.replace(/^public\./,'')||'');
    setView('chat');setDraft('');
    requestAnimationFrame(()=>{const el=contentRef.current;if(el)el.scrollTop=el.scrollHeight});
   }catch(error){if(epoch===loadEpoch.current)setError(errorText(error))}
@@ -120,7 +120,7 @@ function App(){
  }
  actionsRef.current={stop:()=>abort.current?.abort(),retry:message=>prepareRetry(message),history:session?latestHistory:undefined};
  async function send(text=draft){if(busyRef.current||loading||dataBusy||!text.trim())return;if(text.trim().length<2||text.trim().length>2000){setError('问题需要 2–2000 个字。');return}busyRef.current=true;setBusy(true);setError('');setView('chat');setProgress('正在连接分析服务…');loadEpoch.current++;
-  const controller=new AbortController();abort.current=controller;const assistantId=ids();let question=text.trim();if(selected&&(!session||activeScope?.source_table.replace(/^public\./,'')!==selected))question=`使用数据表 public.${selected}。${question}`;
+  const controller=new AbortController();abort.current=controller;const assistantId=ids();const question=text.trim();const sourceName=selected||activeScope?.source_table.replace(/^public\./,'')||'';
   setDraft('');setMessages(items=>[...items,{id:ids(),role:'user',content:text.trim()},{id:assistantId,role:'assistant',content:'',status:'running',retry:{question:text.trim(),sourceTable:selected||activeScope?.source_table.replace(/^public\./,'')||''}}]);
   requestAnimationFrame(()=>{const el=contentRef.current;if(!el)return;const rows=el.querySelectorAll('.question-row');const last=rows[rows.length-1];if(last)last.scrollIntoView({block:'start',behavior:'auto'});else el.scrollTop=el.scrollHeight});
   try{
@@ -133,9 +133,10 @@ function App(){
      setSession(result.session_id);setScope(result.analysis_context||null);
      if(result.context_reset)setMemory(null);else setMemory(result.session_context||result.analysis_context||memory);
      if(result.analysis_context)setSelected(result.analysis_context.source_table.replace(/^public\./,''));
+     else if(result.source_table)setSelected(result.source_table.replace(/^public\./,''));
      setMessages(items=>items.map(m=>m.id===assistantId?{...m,content:result.answer,result,status:result.finished?'completed':result.requires_clarification?'clarification':'incomplete'}:m));
     }
-   },controller.signal);
+   },controller.signal,sourceName?`public.${sourceName}`:null);
   }catch(error){
    const stopped=controller.signal.aborted;
    setMessages(items=>items.map(m=>m.id===assistantId?{...m,status:stopped?'stopped':'failed',failure:failureInfo(error,stopped),result:undefined,charts:[],suggestions:[]}:m));

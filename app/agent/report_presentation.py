@@ -92,3 +92,29 @@ def ensure_evidence_sections(answer, agent):
             if not has_orders or not has_supply:
                 answer += "\n\n" + driver_evidence(result)
     return answer
+
+
+
+def outlier_report(row: dict, metric_label: str) -> str | None:
+    """Present the fixed aggregate without asking a model to reinterpret sample counts."""
+    if "valid_count" not in row:
+        return None
+    count = int(row["valid_count"])
+    if count == 0:
+        return "所选范围没有有效的非空数值，无法计算合计、分位边界或异常值处理结果；这不等于金额为零。"
+
+    def number(key):
+        value = row.get(key)
+        return format(Decimal(str(value)).normalize(), "f") if value is not None else "未定义"
+
+    retained = int(row["retained_count"])
+    return (
+        f"{metric_label}：原始合计 **{number('original_amount')}**，缩尾后合计 **{number('winsorized_amount')}**。\n\n"
+        f"按 1%／99% 分位边界 **{number('lower_bound')}／{number('upper_bound')}** 处理；"
+        f"有效样本 **{count}** 条，空值不参与计算。\n\n"
+        f"缩尾保留全部 **{count}** 条有效样本，仅把区间外的数值拉到边界。"
+        f"低于下界 **{int(row['below_count'])}** 条，高于上界 **{int(row['above_count'])}** 条。\n\n"
+        f"截尾对照：区间内保留 **{retained}** 条，合计 **{number('truncated_amount')}**。"
+        + ("零合计是因为全部有效样本被排除，不代表原始金额为零。" if retained == 0 else "")
+        + "\n\n处理仅作用于本轮计算视图，未修改原表；样本少时分位边界不宜用于推断一般分布。"
+    )

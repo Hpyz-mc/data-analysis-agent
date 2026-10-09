@@ -18,6 +18,11 @@ test('a new chat omits the session ID; missing result is not success',async()=>{
  globalThis.fetch=async(_url,init)=>{assert.deepEqual(JSON.parse(init.body),{question:'测试'});return new Response('event: delta\ndata: {"text":"未完成"}\n\n')};
  try{await assert.rejects(()=>analyzeStream('测试',null,()=>{},new AbortController().signal),/未收到完整/)}finally{globalThis.fetch=original}
 });
+test('selected source is carried on every turn without altering the question',async()=>{
+ const original=globalThis.fetch,requests=[];
+ globalThis.fetch=async(_url,init)=>{requests.push(JSON.parse(init.body));return new Response('event: result\ndata: {"answer":"30","finished":true,"steps":[],"charts":[],"suggestions":[]}\n\n')};
+ try{for(const session of [null,'existing'])await analyzeStream('查询销售额',session,()=>{},new AbortController().signal,'public.sales');assert.deepEqual(requests,[{question:'查询销售额',source_table:'public.sales'},{question:'查询销售额',session_id:'existing',source_table:'public.sales'}])}finally{globalThis.fetch=original}
+});
 test('SSE error event becomes a readable failure',async()=>{
  const original=globalThis.fetch;globalThis.fetch=async()=>new Response('event: error\ndata: {"message":"证据不足"}\n\n');
  try{await assert.rejects(()=>analyzeStream('测试',null,()=>{},new AbortController().signal),/证据不足/)}finally{globalThis.fetch=original}

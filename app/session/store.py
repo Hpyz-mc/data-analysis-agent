@@ -216,6 +216,7 @@ class SessionStore:
     def _history_artifacts(row: dict) -> dict:
         artifacts = row.pop("artifacts", None) or {}
         return {**row, "usage": artifacts.get("usage"), "charts": artifacts.get("charts", []),
+                "source_table": artifacts.get("source_table"),
                 "suggestions": artifacts.get("suggestions", []),
                 "analysis_context": artifacts.get("analysis_context"),
                 "context_reset": artifacts.get("context_reset", False),

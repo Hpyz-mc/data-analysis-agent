@@ -118,17 +118,25 @@ def _analyze(request: AnalysisRequest, emit=None) -> AnalysisResponse:
         if not settings.session_database_url:
             if request.session_id is not None:
                 raise SessionStorageError("会话未启用，请先配置 SESSION_DATABASE_URL。")
-            return agent.run(question=request.question, **({"emit": emit} if emit else {}))
+            return agent.run(question=request.question,
+                             **({"source_table": request.source_table} if request.source_table else {}),
+                             **({"emit": emit} if emit else {}))
 
         store = SessionStore(settings.session_database_url)
         with store.begin_turn(request.session_id, request.question) as turn:
             context = getattr(turn, "analysis_context", None)
+            # Drop stored scope before both planning and persistence when the caller switches tables.
+            source_switched = bool(request.source_table and context
+                                  and request.source_table.strip().removeprefix("public.") != context.source_table.removeprefix("public."))
+            if source_switched:
+                context = None
             try:
                 if emit:
                     # Keep a new conversation recoverable even if the final stream fails.
                     emit("session", {"session_id": str(turn.session_id)})
                 response = agent.run(
-                    question=request.question, conversation_history=turn.history,
+                    question=request.question, conversation_history=[] if source_switched else turn.history,
+                    **({"source_table": request.source_table} if request.source_table else {}),
                     **({"analysis_context": context} if context is not None else {}),
                     **({"emit": emit} if emit else {}),
                 )
@@ -142,14 +150,17 @@ def _analyze(request: AnalysisRequest, emit=None) -> AnalysisResponse:
                 raise
             usable = _usable_for_history(response)
             response.context_reset = bool(
-                usable and response.finished and response.plan.requires_sql
-                and context is not None and response.analysis_context is None
+                usable and response.analysis_context is None and (
+                    source_switched or (response.finished and response.plan.requires_sql and context is not None)
+                )
             )
             memory_context = response.analysis_context
-            if memory_context and memory_context.kind == "lookup" and context and context.kind != "lookup":
+            if (memory_context and memory_context.kind == "lookup" and context and context.kind != "lookup"
+                    and memory_context.source_table == context.source_table):
                 memory_context = context  # A quick lookup does not erase the ongoing comparison.
             response.session_context = None if response.context_reset else memory_context or context
             artifacts = {
+                "source_table": response.source_table,
                 "usage": response.usage.model_dump() if response.usage else None,
                 "charts": response.charts,
                 "suggestions": [item.model_dump() for item in response.suggestions],
@@ -163,7 +174,7 @@ def _analyze(request: AnalysisRequest, emit=None) -> AnalysisResponse:
                 "completed" if usable else "incomplete",
                 **({"artifacts": artifacts, "analysis_context": memory_context,
                     "context_reset": response.context_reset}
-                   if response.usage or response.charts or response.analysis_context or response.context_reset or response.session_context or response.diagnostics else {}),
+                   if response.source_table or response.usage or response.charts or response.analysis_context or response.context_reset or response.session_context or response.diagnostics else {}),
             )
             response.session_id = turn.session_id
             return response

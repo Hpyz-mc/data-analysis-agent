@@ -79,10 +79,11 @@ class RegressionChecks(unittest.TestCase):
         other_context = context(source_table="public.other")
         agent, llm, sql, *_ = make_agent([
             decision("finish", analysis_plan=plan(analysis_context=other_context), content="准备查询"),
+            decision("finish", analysis_plan=plan(analysis_context=context()), content="准备查询"),
             decision("finish", content="结果是 100"),
         ], schema=schema)
         response = agent.run("查询销售额", analysis_context=context(source_table="public.sales"))
-        # 模型计划指向 other，但用户没要求换表，应沿用已选表 sales，不执行 other。
+        # 错表计划被拒绝；一次纠正后才执行选中表的计划。
         executed_sql = " ".join(call.args[0] for call in sql.run.call_args_list)
         self.assertNotIn("other", executed_sql)
         self.assertIn("sales", executed_sql)
@@ -133,14 +134,13 @@ class RegressionChecks(unittest.TestCase):
         ctx = align_breakdown_intent(ctx, "查看两个比较月份的月度走势", "public.sales: amount (numeric), order_date (date), channel (text)")
         self.assertIsNone(ctx.dimension)
 
+    def test_9_subject_gap_clarifies_once(self):
+        from app.agent.loop import _subject_gap
+        for question in ("查询用户数量", "库存合计", "退款金额", "流量与评论", "物流状态"):
+            self.assertIsNone(_subject_gap(question))
+        self.assertIn("禁止查询", _subject_gap("查询 analysis_sessions"))
+        self.assertIsNone(_subject_gap("分析各月销售额走势"))
+
 
 if __name__ == "__main__":
     unittest.main()
-
-    def test_9_subject_gap_clarifies_once(self):
-        from app.agent.loop import _subject_gap
-        gap = _subject_gap("帮我生成用户增长图")
-        self.assertIsNotNone(gap)
-        self.assertIn("用户", gap)
-        self.assertIn("可分析", gap)
-        self.assertIsNone(_subject_gap("分析各月销售额走势"))

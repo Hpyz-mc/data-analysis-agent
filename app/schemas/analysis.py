@@ -19,10 +19,15 @@ class AnalysisRequest(BaseModel):
     session_id: UUID | None = Field(
         default=None, description="不填则开启新会话；追问时填写上次返回的 session_id"
     )
+    source_table: str | None = Field(
+        default=None, min_length=1, max_length=160,
+        description="本轮选择的数据表（如 public.sales）；后端将约束计划和实际查询的数据源",
+    )
 
 
 class AnalysisResponse(BaseModel):
     answer: str
+    source_table: str | None = None
     plan: AnalysisPlan | None = None
     rounds: int
     finished: bool
@@ -41,6 +46,7 @@ class AnalysisResponse(BaseModel):
 
 class SessionHistoryItem(BaseModel):
     turn_no: int
+    source_table: str | None = None
     question: str
     answer: str | None
     status: str

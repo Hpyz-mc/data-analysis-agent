@@ -11,9 +11,10 @@ from app.agent.analysis_policy import ANALYSIS_CLARIFICATION_PREFIX, build_analy
 from app.agent.semantics import semantic_sql_error
 from app.agent.context import AnalysisContext, is_followup, merge_context
 from app.agent.intent import grain_feedback
+from app.agent.source_scope import normalize_source, resolve_source, sql_source_error, missing_field_error
 from app.agent.diagnostics import AnalysisDiagnostics, tool_receipts
 from app.agent.report_fallback import partial_report
-from app.agent.report_presentation import ensure_evidence_sections
+from app.agent.report_presentation import ensure_evidence_sections, outlier_report
 from app.agent.answer_contract import build_contract, append_driver_pipeline, append_requested_charts
 from app.agent.scoped_analysis import (
     ScopeError, align_time_intent, align_breakdown_intent, build_pipeline, followup_suggestions,
@@ -36,31 +37,13 @@ _DATA_INTENT = re.compile(
 )
 _NON_ANALYSIS = re.compile(r"泄露|密钥|密码|令牌|忽略.*提示|系统提示", re.I)
 
-# 当前演示数据没有的维度：出现即澄清一次，避免模型为不存在的主题空转轮次。
-_AVAILABLE_HINT = ("现有数据可分析：销售额、订单量、渠道、品类、日期趋势、排名、占比、分层、相关性等。")
-_SUBJECT_GAP = [
-    (re.compile(r"用户(?!补充)|注册|会员|复购|留存|活跃|新增用户|用户增长"),
-     "当前可访问的数据表没有用户/注册/会员相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"流量|点击|访问|浏览|曝光|广告|转化"),
-     "当前可访问的数据表没有流量/广告/访问相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"库存|缺货率|备货|仓储"),
-     "当前可访问的数据表没有库存/仓储相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"退款|退货|售后|投诉"),
-     "当前可访问的数据表没有退款/售后相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"评论|评分|评价"),
-     "当前可访问的数据表没有评论/评分相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"物流|配送|发货|签收"),
-     "当前可访问的数据表没有物流/配送相关字段，无法完成这类分析。" + _AVAILABLE_HINT),
-    (re.compile(r"system_upload_records|analysis_sessions|analysis_turns|内部管理表|管理表"),
-     "平台内部管理表（会话、上传记录等）不属于业务数据，禁止查询。" + _AVAILABLE_HINT),
-]
+_INTERNAL_SUBJECT = re.compile(r"system_upload_records|analysis_sessions|analysis_turns|内部管理表", re.I)
 
 
 def _subject_gap(question: str) -> str | None:
-    """当前可访问表中不存在的业务维度或禁止查询的内部表；返回澄清文案或 None。"""
-    for pattern, message in _SUBJECT_GAP:
-        if pattern.search(question):
-            return message
+    """Only internal tables are categorically forbidden; business fields use schema validation."""
+    if _INTERNAL_SUBJECT.search(question):
+        return "平台内部管理表（会话、上传记录等）不属于业务数据，禁止查询。"
     return None
 
 
@@ -110,10 +93,18 @@ class DataAnalysisAgent:
         self, question: str, conversation_history: list[ConversationTurn] | None = None,
         analysis_context: AnalysisContext | None = None,
         emit=None,
+        source_table: str | None = None,
     ) -> AnalysisResponse:
         self._emit = emit
         self._streamed_report = False
+        self._deterministic_report = False
         self._trace = AnalysisDiagnostics()
+        # A source switch must not inherit old metrics, periods, filters or clarification text.
+        explicit = re.findall(r"\bpublic\.([^\W\d]\w*)", question)
+        requested = source_table or ("public." + explicit[0] if len(explicit) == 1 else None)
+        if (requested and analysis_context
+                and requested.strip().removeprefix("public.") != analysis_context.source_table.removeprefix("public.")):
+            analysis_context, conversation_history = None, []
         task_question = question
         if (conversation_history and conversation_history[-1].answer.startswith(
                 ("为了准确分析", "我检测到数据库中存在多份相似的数据表"))
@@ -134,6 +125,7 @@ class DataAnalysisAgent:
         initial_state = {
                 "agent": AgentState(
                     question=task_question, task=task,
+                    source_table=source_table,
                     conversation_history=conversation_history or [],
                     analysis_context=analysis_context,
                 ),
@@ -209,36 +201,48 @@ class DataAnalysisAgent:
         if emit:
             emit("status", {"message": "正在读取数据结构…"})
         schema = self.sql_tool.get_schema()
+        agent = state["agent"].model_copy(deep=True)
+        clarification = _subject_gap(agent.question)
+        if not clarification:
+            try:
+                agent.source_table = resolve_source(agent.question, schema, agent.source_table, agent.analysis_context)
+                if (agent.analysis_context and agent.source_table
+                        and normalize_source(agent.analysis_context.source_table) != agent.source_table):
+                    agent.analysis_context, agent.conversation_history = None, []
+                    agent.task = build_analysis_task(agent.question)
+                if agent.source_table:
+                    schema = "\n".join(line for line in schema.splitlines()
+                                       if line.startswith(agent.source_table + ": "))
+                missing = missing_field_error(agent.question, schema, agent.source_table)
+                if missing:
+                    clarification = f"为了准确分析，请先确认分析范围：{missing}"
+            except ScopeError as exc:
+                clarification = f"为了准确分析，请先确认分析范围：{exc}"
         check_versions = getattr(self.sql_tool, "find_ambiguous_imports", None)
-        question = state["agent"].question
-        if is_followup(question, state["agent"].analysis_context):
-            question += " " + state["agent"].analysis_context.source_table
-        clarification = check_versions(question) if check_versions else None
-        if not clarification and is_followup(state["agent"].question, state["agent"].analysis_context):
+        question = agent.question
+        if agent.source_table:
+            question += " " + agent.source_table
+        clarification = clarification or (check_versions(question) if check_versions else None)
+        if not clarification and is_followup(agent.question, agent.analysis_context):
             missing = missing_requested_dimension(
-                state["agent"].question, state["agent"].analysis_context, schema,
+                agent.question, agent.analysis_context, schema,
             )
             if missing:
                 clarification = f"为了准确分析，请先确认分析范围：{missing}"
-        if (not clarification
-                and not re.search(r"什么是|如何理解|定义|解释.*概念", state["agent"].question)):
-            gap = _subject_gap(state["agent"].question)
-            if gap:
-                clarification = gap
-        if (not clarification and state["agent"].analysis_context is None
-                and _is_data_question(state["agent"].question)
-                and not re.search(r"什么是|如何理解|定义|解释.*概念", state["agent"].question)):
+        if (not clarification and agent.source_table is None
+                and _is_data_question(agent.question)
+                and not re.search(r"什么是|如何理解|定义|解释.*概念", agent.question)):
             tables = [line.split(": ", 1)[0].removeprefix("public.")
                       for line in schema.splitlines() if ": " in line]
             if len(tables) > 1 and not any(table in state["agent"].question for table in tables):
                 clarification = ("为了准确分析，请先明确要分析的数据表、指标和时间范围。当前可访问的数据表："
                                  + "、".join(tables) + "。")
-        clarification = clarification or state["agent"].task.clarification
+        clarification = clarification or agent.task.clarification
         if clarification:
             self._stop("scope_clarification")
         timings = dict(state["timings_ms"])
         timings["schema"] = round((perf_counter() - state["started"]) * 1000)
-        return {"schema": schema, "timings_ms": timings, "clarification": clarification,
+        return {"agent": agent, "schema": schema, "timings_ms": timings, "clarification": clarification,
                 "report_mode": "clarification" if clarification else "incomplete"}
 
     def _route_after_schema(self, state: WorkflowState) -> str:
@@ -259,6 +263,13 @@ class DataAnalysisAgent:
                 # Do not spend model calls asking to finish a failed fixed pipeline.
                 agent.feedback = feedback
                 return {"agent": agent, "report_mode": "incomplete", "next_action": "report"}
+            if agent.analysis_context.kind == "outlier":
+                rows = json.loads(agent.steps[-1].observation).get("rows", [])
+                content = outlier_report(rows[0], agent.analysis_context.metric_label) if rows else None
+                if content is not None:
+                    self._deterministic_report = True
+                    decision = SimpleNamespace(action="finish", content=content)
+                    return {"agent": agent, "decision": decision, "report_mode": "finish", "next_action": "report"}
         llm_started = perf_counter()
         emit = getattr(self, "_emit", None)
         report_ready = agent.plan is not None and not self._finish_feedback(agent)
@@ -331,6 +342,15 @@ class DataAnalysisAgent:
                 return self._reject_initial_plan(agent, timings, f"本轮分析类型为 {agent.task.kind}，analysis_context.kind 必须一致，不能用单次查数代替比较分析。")
             if not decision.plan.requires_sql:
                 agent.task.kind, agent.task.axis, agent.task.clarification = "lookup", "none", None
+            if (decision.plan.analysis_context and agent.source_table
+                    and decision.plan.requires_sql):
+                try:
+                    proposed = normalize_source(decision.plan.analysis_context.source_table)
+                except ScopeError:
+                    proposed = None
+                if proposed != agent.source_table:
+                    return self._reject_initial_plan(agent, timings,
+                        f"本轮已锁定数据表 {agent.source_table}，不得使用其他表。请重新提交该表的分析计划。")
             agent.plan = decision.plan
             if agent.plan.analysis_context is not None:
                 try:
@@ -461,7 +481,7 @@ class DataAnalysisAgent:
             agent.feedback = "SQL 已失败两次，请停止查询并说明目前无法确定的结论。"
             return {"agent": agent}
         started = perf_counter()
-        semantic_error = semantic_sql_error(sql)
+        semantic_error = sql_source_error(sql, agent.source_table) or semantic_sql_error(sql)
         if semantic_error:
             observation = f"工具错误：{semantic_error}"
             failed_sql.add(normalized)
@@ -548,7 +568,9 @@ class DataAnalysisAgent:
             answer = state["clarification"]
         elif finished:
             answer = state["decision"].content
-            if (getattr(self, "_emit", None) and not self._streamed_report
+            if getattr(self, "_emit", None) and self._deterministic_report:
+                self._emit("delta", {"text": answer})
+            if (getattr(self, "_emit", None) and not self._streamed_report and not self._deterministic_report
                     and not self._finish_feedback(agent)):
                 self._emit("status", {"message": "正在生成回答…"})
                 started = perf_counter()
@@ -602,6 +624,9 @@ class DataAnalysisAgent:
         )
         return {"response": AnalysisResponse(
             answer=answer, plan=agent.plan, rounds=agent.current_round,
+            source_table=agent.source_table if any(
+                line.startswith((agent.source_table or "") + ": ") for line in state["schema"].splitlines()
+            ) else None,
             finished=finished, steps=agent.steps, charts=agent.charts,
             timings_ms=timings,
             analysis_context=context,

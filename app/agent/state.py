@@ -46,6 +46,7 @@ class ConversationTurn(BaseModel):
 
 class AgentState(BaseModel):
     question: str
+    source_table: str | None = None
     task: AnalysisTask = Field(default_factory=AnalysisTask)
     conversation_history: list[ConversationTurn] = Field(default_factory=list)
     plan: AnalysisPlan | None = None

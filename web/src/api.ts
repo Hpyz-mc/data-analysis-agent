@@ -2,7 +2,7 @@ import type {Failure} from './chatStatus';
 export type Scope = {kind:string;source_table:string;metric_label:string;metric_expression:string;time_grain?:string|null;time_column?:string|null;baseline?:{start:string;end:string}|null;current?:{start:string;end:string}|null;baseline_group?:string|null;current_group?:string|null;dimension?:string|null;filters:{column:string;values:(string|number|boolean)[]}[]};
 export type Suggestion = {label:string;question:string};
 export type Step = {round:number;action:string;tool_input:string;observation:string;reasoning:string};
-export type Result = {answer:string;finished:boolean;session_id:string|null;charts:string[];suggestions:Suggestion[];analysis_context:Scope|null;session_context?:Scope|null;context_reset?:boolean;requires_clarification?:boolean;steps:Step[];plan?:{metric:string;time_range:string;comparison:string}|null};
+export type Result = {answer:string;finished:boolean;session_id:string|null;source_table?:string|null;charts:string[];suggestions:Suggestion[];analysis_context:Scope|null;session_context?:Scope|null;context_reset?:boolean;requires_clarification?:boolean;steps:Step[];plan?:{metric:string;time_range:string;comparison:string}|null};
 export type Message = {id:string;role:'user'|'assistant';content:string;status?:string;result?:Result;charts?:string[];suggestions?:Suggestion[];context?:Scope|null;failure?:Failure;retry?:{question:string;sourceTable:string}};
 export type Session = {session_id:string;title:string;question_preview?:string;created_at:string;updated_at:string};
 export type Dataset = {table_name:string;original_file_name?:string;rows:number;columns:string[];preview:Record<string,unknown>[];upload_time?:string};
@@ -12,8 +12,8 @@ export function listSessions(){return request<{sessions:Session[]}>('/api/v1/ses
 export function listDatasets(){return request<{datasets:Dataset[]}>('/api/v1/datasets')}
 export function displayQuestion(question:string){const original=question.trim();return original.replace(/^使用数据表 public\.[\p{L}\p{N}_]+。\s*/u,'')||original}
 export function chartPath(value:string){return /^\/api\/v1\/charts\/[a-zA-Z0-9_-]+\.png$/.test(value)?value:null}
-export async function analyzeStream(question:string,session:string|null,onEvent:(event:string,data:any)=>void,signal:AbortSignal) {
- const response=await fetch('/api/v1/analyze/stream',{method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},body:JSON.stringify({question,...(session?{session_id:session}:{})}),signal});
+export async function analyzeStream(question:string,session:string|null,onEvent:(event:string,data:any)=>void,signal:AbortSignal,sourceTable:string|null=null) {
+ const response=await fetch('/api/v1/analyze/stream',{method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},body:JSON.stringify({question,...(session?{session_id:session}:{}),...(sourceTable?{source_table:sourceTable}:{})}),signal});
  if(!response.ok){const error=await response.json().catch(()=>({detail:'连接分析服务失败'}));throw new APIError(response.status,error.detail)}
  if(!response.body)throw new Error('浏览器未收到流式响应');
  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',completed=false;

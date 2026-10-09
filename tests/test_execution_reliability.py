@@ -31,7 +31,7 @@ def components(mode):
     elif mode == "transport":
         decisions = [LLMError("模拟网络中断", code="connection_error")]
     elif mode == "budget_with_data":
-        decisions = [decision("sql", analysis_plan=plan(python_operation="summary"), sql="SELECT amount FROM sales"),
+        decisions = [decision("sql", analysis_plan=plan(python_operation="summary"), sql="SELECT sales_amount AS amount FROM public.demo_ecommerce_orders"),
                      LLMError("本轮已达到模型调用次数预算", code="model_call_budget")]
     else:
         decisions = [decision("finish", analysis_plan=first), decision("finish", content="下降主要来自线下门店。")]

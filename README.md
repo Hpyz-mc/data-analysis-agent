@@ -141,7 +141,7 @@ stateDiagram-v2
 
 ## 测试与验收
 
-后端 131 个单元测试使用模拟依赖，不要求真实模型或数据库：
+后端 160 个单元测试使用模拟依赖，不要求真实模型或数据库：
 
 ```bash
 python -m pip install -r requirements.txt
@@ -156,6 +156,8 @@ python -m scripts.accept_model_policy
 ```
 
 四轮验收覆盖查数、合计追问、归因、走势 + 折线图 + 流式与历史持久化。CI 在每次推送到 main 时运行后端测试、前端测试与构建、Compose 配置检查。测试通过不等于模型回答逐句准确，验收记录见[归档](docs/archive/README.md)。
+
+2026-10-09 的选表约束、中文业务字段与空值计算修复，以及六轮真实前端验收的发现和边界，见[定向修复验收记录](docs/source-and-null-acceptance.md)。
 
 ## 已知限制
 

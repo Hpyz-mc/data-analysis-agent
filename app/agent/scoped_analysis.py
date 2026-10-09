@@ -15,6 +15,14 @@ class ScopeError(ValueError):
     pass
 
 
+METRIC_ALIASES = {
+    "销售额": ("sales_amount", "revenue"), "销售金额": ("sales_amount", "revenue"),
+    "订单金额": ("sales_amount",), "金额": ("sales_amount", "amount"),
+    "订单量": ("order_count", "orders"), "利润": ("profit",),
+    "销量": ("order_count", "quantity"),
+}
+
+
 def schema_columns(schema: str) -> dict[str, dict[str, str]]:
     tables = {}
     for line in schema.splitlines():
@@ -44,13 +52,8 @@ def validate_context(context: AnalysisContext, schema: str, question: str = "") 
     if len(bare) > 2 and bare[0] == bare[-1] == '"':
         bare = bare[1:-1]
         context.metric_expression = bare
-    if re.fullmatch(r"[\u4e00-\u9fff]{2,12}", bare):
-        for candidate in {
-            "销售额": ("sales_amount", "revenue"), "销售金额": ("sales_amount", "revenue"),
-            "订单金额": ("sales_amount",), "金额": ("sales_amount", "amount"),
-            "订单量": ("order_count", "orders"), "利润": ("profit",),
-            "销量": ("order_count", "quantity"),
-        }.get(bare, ()):
+    if bare not in columns and re.fullmatch(r"[\u4e00-\u9fff]{2,12}", bare):
+        for candidate in METRIC_ALIASES.get(bare, ()):
             if candidate in columns:
                 context.metric_expression = candidate
                 break
@@ -74,7 +77,7 @@ def validate_context(context: AnalysisContext, schema: str, question: str = "") 
         raise ScopeError("指标必须引用数据表中的数值字段。")
     for column in metric_columns:
         if column.table or column.name not in columns:
-            raise ScopeError("指标引用了当前表中不存在的字段。")
+            raise ScopeError(f"当前表没有字段 {column.name}，请明确可用的指标字段。")
         if not re.search(r"numeric|decimal|integer|bigint|smallint|real|double", columns[column.name]):
             raise ScopeError(f"字段 {column.name} 不是数值类型，无法按当前口径归因。")
         column.set("this", exp.Identifier(this=column.name, quoted=True))
@@ -377,8 +380,10 @@ def build_pipeline(context: AnalysisContext, first_round: int, chart_type: str |
             f"WITH bounds AS (SELECT percentile_cont(0.01) WITHIN GROUP (ORDER BY {metric}) AS lo, "
             f"percentile_cont(0.99) WITHIN GROUP (ORDER BY {metric}) AS hi FROM {table} WHERE {where}) "
             f"SELECT SUM({metric}) AS original_amount, "
-            f"SUM(LEAST(GREATEST({metric}, (SELECT lo FROM bounds)), (SELECT hi FROM bounds))) AS winsorized_amount, "
-            f"SUM(CASE WHEN {metric} BETWEEN (SELECT lo FROM bounds) AND (SELECT hi FROM bounds) THEN {metric} ELSE 0 END) AS truncated_amount, "
+            f"SUM(CASE WHEN {metric} IS NULL THEN NULL ELSE LEAST(GREATEST({metric}, (SELECT lo FROM bounds)), (SELECT hi FROM bounds)) END) AS winsorized_amount, "
+            f"SUM(CASE WHEN {metric} IS NULL THEN NULL WHEN {metric} BETWEEN (SELECT lo FROM bounds) AND (SELECT hi FROM bounds) THEN {metric} ELSE 0 END) AS truncated_amount, "
+            f"COUNT({metric}) AS valid_count, "
+            f"COUNT(*) FILTER (WHERE {metric} BETWEEN (SELECT lo FROM bounds) AND (SELECT hi FROM bounds)) AS retained_count, "
             f"COUNT(*) FILTER (WHERE {metric} < (SELECT lo FROM bounds)) AS below_count, "
             f"COUNT(*) FILTER (WHERE {metric} > (SELECT hi FROM bounds)) AS above_count, "
             f"(SELECT lo FROM bounds) AS lower_bound, (SELECT hi FROM bounds) AS upper_bound "
